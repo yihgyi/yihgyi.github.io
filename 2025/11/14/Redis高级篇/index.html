@@ -1,0 +1,217 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>redis高级篇 | yihgyi's Blog</title><meta name="author" content="tzxld"><meta name="copyright" content="tzxld"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Redis高级篇单节点部署Redis的问题 数据丢失:Redis是基于内存存储,服务重启可能丢失数据,需要做持久化,讲内存数据写入磁盘 并发能力:在高并发情况下,单个节点redis扛不住(百万并发),主从集群,实现负载均衡的多个从节点,并且读写分离,读写之间没有影响从而并发能力更强,主挂了,从顶上,从而使系统具有高可用性 故障恢复:集群部署还能实现先用还正常的,一个挂了就是真的挂了(需要变运行变修"><meta property="og:type" content="article"><meta property="og:title" content="redis高级篇"><meta property="og:url" content="https://yihgyi.github.io/2025/11/14/Redis%E9%AB%98%E7%BA%A7%E7%AF%87/index.html"><meta property="og:site_name" content="yihgyi&#39;s Blog"><meta property="og:description" content="Redis高级篇单节点部署Redis的问题 数据丢失:Redis是基于内存存储,服务重启可能丢失数据,需要做持久化,讲内存数据写入磁盘 并发能力:在高并发情况下,单个节点redis扛不住(百万并发),主从集群,实现负载均衡的多个从节点,并且读写分离,读写之间没有影响从而并发能力更强,主挂了,从顶上,从而使系统具有高可用性 故障恢复:集群部署还能实现先用还正常的,一个挂了就是真的挂了(需要变运行变修"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://cdn.acwing.com/media/user/profile/photo/231226_lg_3803254d73.jpg"><meta property="article:published_time" content="2025-11-14T05:05:42.000Z"><meta property="article:modified_time" content="2025-11-14T05:06:31.885Z"><meta property="article:author" content="tzxld"><meta name="twitter:card" content="summary"><meta name="twitter:image" content="https://cdn.acwing.com/media/user/profile/photo/231226_lg_3803254d73.jpg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://yihgyi.github.io/2025/11/14/Redis%E9%AB%98%E7%BA%A7%E7%AF%87/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload='this.media="all"'><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.min.css" media="print" onload='this.media="all"'><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":false,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  }
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE={title:"redis高级篇",isPost:!0,isHome:!1,isHighlightShrink:void 0,isToc:!0,postUpdate:"2025-11-14 13:06:31"}</script><noscript><style>#nav{opacity:1}.justified-gallery img{opacity:1}#post-meta time,#recent-posts time{display:inline!important}</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+    win.getCSS = (url,id = false) => new Promise((resolve, reject) => {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = url
+      if (id) link.id = id
+      link.onerror = reject
+      link.onload = link.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        link.onload = link.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(link)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 6.3.0"></head><body><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn.acwing.com/media/user/profile/photo/231226_lg_3803254d73.jpg" onerror='onerror=null,src="/img/friend_404.gif"' alt="avatar"></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><hr><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 清单</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a href="/" title="yihgyi's Blog"><span class="site-name">yihgyi's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 清单</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">redis高级篇</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-11-14T05:05:42.000Z" title="发表于 2025-11-14 13:05:42">2025-11-14</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-11-14T05:06:31.885Z" title="更新于 2025-11-14 13:06:31">2025-11-14</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>11分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" data-flag-title="redis高级篇"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="Redis高级篇"><a href="#Redis高级篇" class="headerlink" title="Redis高级篇"></a>Redis高级篇</h1><h2 id="单节点部署Redis的问题"><a href="#单节点部署Redis的问题" class="headerlink" title="单节点部署Redis的问题"></a>单节点部署Redis的问题</h2><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251014210144846.png" alt="image-20251014210144846"></p><p>数据丢失:Redis是基于内存存储,服务重启可能丢失数据,需要做<strong>持久化</strong>,讲内存数据写入磁盘</p><p>并发能力:在高并发情况下,单个节点redis扛不住(百万并发),主从集群,实现<strong>负载均衡</strong>的多个从节点,并且读写分离,读写之间没有影响从而并发能力更强,主挂了,从顶上,从而使系统具有高可用性</p><p>故障恢复:集群部署还能实现先用还正常的,一个挂了就是真的挂了(需要变运行变修复的效果才能稳定运行) 靠哨兵机制, 检测<strong>健康状态</strong>并且自动恢复</p><p>基于内存: 内存存储容量没有磁盘高,单节点内存有限,主从集群其实主从数据是一样的所以内存上限还是单个节点的上限,为了解决这个问题可以使用Elastic Search的分片存储 把数据分片保存到不同节点上 这样就可以存储更多数据了,搭建分片集群,利用<strong>插槽机制</strong>实现<strong>动态扩容</strong>(理论上存储能力没有上限)</p><h2 id="Redis持久化"><a href="#Redis持久化" class="headerlink" title="Redis持久化"></a>Redis持久化</h2><h3 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251014211533592.png" alt="image-20251014211533592"></p><p>在某一时刻把Redis的数据文件备份一份出来写到当前运行redis的磁盘目录中</p><p>但是Redis服务器是单线程的,执行save时候会阻塞所有命令,而磁盘IO比较耗时,当redis数据比较多的时候,就会影响服务器的性能</p><p>所以save操作一般是redis节点将要关闭前执行好一些</p><p>所以推荐使用bgsave,可以开启一个子进程异步执行RDB</p><p>停机时候会自动保存到redis当前所在运行目录</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251014212033476.png" alt="image-20251014212033476"></p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251014212052664.png" alt="image-20251014212052664"></p><p>再次启动redis时候,数据就会自动恢复(默认就有持久化)</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251014212851345.png" alt="image-20251014212851345"></p><p>停机时候执行(但是宕机就不好说了)</p><h4 id="配置文件"><a href="#配置文件" class="headerlink" title="配置文件"></a>配置文件</h4><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251014212334479.png" alt="image-20251014212334479"></p><p>自动触发RDB 900s有一个key被修改 开启一个子线程来做RDB 300s 10个 60s 1w个</p><p>RDB 不设置压缩 redis数据在内存中占多少,那么存到磁盘中就占多少 压缩的话用到cpu资源 cpu资源充足建议开启压缩</p><p>RDB的文件名默认是dump.rdb 默认保存在redis当前运行的路径中</p><p>测试触发时机</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251014212951290.png" alt="image-20251014212951290"></p><h4 id="RDB的实现原理"><a href="#RDB的实现原理" class="headerlink" title="RDB的实现原理"></a>RDB的实现原理</h4><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251014233455498.png" alt="image-20251014233455498"></p><p>RDB 使用子线程来做备份写入磁盘时,</p><p>需要<strong>子进程得到当时内存中的数据,而这个操作也需要时间,会阻塞主进程</strong></p><p>所以为了解决这个问题 RDB方法采取的是<strong>fork 主进程使用的页表</strong></p><p>(进程不能直接访问物理内存,由操作系统维护页表,页表上由内存的映射,主进程在页表上进行操作,操作系统再操作内存)</p><p>这样子进程就拿到了主进程使用的页表就可以实现<strong>共享内存</strong>了</p><p>但是考虑到主进程此后还会进行读写操作 就会和子进程的读操作发生<strong>读写冲突</strong></p><p>所以RDB采取的方案是 copy-on-write 父子进程共享内存对应在页表中的每一项都是标记只读(Read-only) 当主进程进行写操作时,操作系统将该物理内存的数据进行拷贝得到副本,此时主进程页表项上映射到内存副本的地址,之后主进程读该数据也会读副本</p><p>在副本上进行读写操作</p><p>这里就会出现一个极端情况,如果在子进程写入磁盘的过程中,主进程把所有数据都更新了,那么就会出现全部数据都有副本,原本的占用的物理内存就会翻倍 所以设计时候内存应该有预留防止出现这种情况</p><p>子进程写的时候是写入一个新的rdb文件 而不是在原来的rdb文件上修改,然后后面替换掉使用的rdb文件</p><h4 id="禁用RDB"><a href="#禁用RDB" class="headerlink" title="禁用RDB"></a>禁用RDB</h4><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015104939509.png" alt="image-20251015104939509"></p><h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015000816747.png" alt="image-20251015000816747"></p><p>优点</p><p>开启子进程不会影响主进程 对主进程资源占用低</p><p>快速加载 RDB快照文件是压缩的二进制文件 适合备份和灾难恢复</p><p>缺点</p><p>比如说30s才写一次到磁盘的话,那中间如果宕机,内存数据就没了</p><p>如果设置写时间较短的话,会增加系统的负担,因为开启子进程在fork页表,压缩,写入磁盘都耗时间且占用资源</p><h3 id="AOF持久化"><a href="#AOF持久化" class="headerlink" title="AOF持久化"></a>AOF持久化</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015101159695.png" alt="image-20251015101159695"></p><p>往一个文件中追加,记录每一个操作的命令,可以当作是命令日志文件 $ 表示命令的长度</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015105149790.png" alt="image-20251015105149790"></p><p>每次恢复时从头执行一遍这个文件中的命令</p><p>在redis中默认关闭</p><p>​	开启修改配置文件</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015101710694.png" alt="image-20251015101710694"></p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015102140832.png" alt="image-20251015102140832"></p><h4 id="刷盘策略"><a href="#刷盘策略" class="headerlink" title="刷盘策略"></a>刷盘策略</h4><p>AOF的频率有三种,always表示redis每执行一条命令就同步将该命令追加到AOP文件中,都是由主进程来执行</p><p>everysec对磁盘读写做了优化,主进程将命令日志存放到内存中的缓冲区,然后每秒钟开启子线程再把缓冲区数据写到磁盘(可能丢失一秒的数据)</p><p>no的话是主进程只把命令日志放到缓冲区, 缓冲区写到磁盘的操作由操作系统来处理 只是写到了内存中,可靠性不能保证</p><p>关闭RDB只开启AOF</p><p>默认使用的就是 everysec</p><p>然后写入当前运行目录</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015105251843.png" alt="image-20251015105251843"></p><p>停掉的话会对AOF数据再次检查</p><p>启动时候对AOF数据进行加载</p><p>AOF是个命令都记录,操作日志,就会使这个AOF内存占用要大,而且有的命令只有最后一次操作有意义(更新到最后一次 前面的都没用)但还是在恢复时都执行了</p><p>为了解决这个问题</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015105635913.png" alt="image-20251015105635913"></p><p>使用bgrewriteof对aof文件进行重写 开启独立进程执行</p><p>子进程在重写 然后主进程把新东西放到一个重写缓冲区 然后重写完就追加到后面去最后替换掉原AOF文件</p><p>同时主进程把新操作追加进原AOF 防止重写时后出现问题</p><h4 id="触发AOF文件重写"><a href="#触发AOF文件重写" class="headerlink" title="触发AOF文件重写"></a>触发AOF文件重写</h4><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015105917954.png" alt="image-20251015105917954"></p><p>比如之前时10 这次变成了21 增长超过了1倍</p><p>或者说文件大小达到了多少</p><h3 id="RDB和AOF的区别"><a href="#RDB和AOF的区别" class="headerlink" title="RDB和AOF的区别?"></a>RDB和AOF的区别?</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015125339730.png" alt="image-20251015125339730"></p><p>因为RDB是保存数据,而AOF是记录操作日志,直接加载数据会比执行操作要快一些,所以宕机恢复速度速度是RDB快一些</p><p>fork 压缩 子进程IO占用系统资源 aof开启子线程io</p><p>一般来说RDB+AOF混合使用</p><p>数据完整性 AOF相对完整一些,默认的刷盘策略只会丢失1s內的 所以恢复优先级是AOF高一些</p><p>现在RDB+AOF混合持久化</p><p>触发重写时候,RDB生成最新快照加到AOF头,然后之后的操作继续追加到AOF后面,恢复时候用RDB,然后再把后面的操作执行</p><h2 id="主从架构"><a href="#主从架构" class="headerlink" title="主从架构"></a>主从架构</h2><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015141610171.png" alt="image-20251015141610171"></p><p>从节点两个名字</p><p>业务中一般读操作比较多,所以让从节点分担读的压力,写写到主节点上,并且主节点和从节点之间实现数据同步</p><p>模拟主从架构,准备阶段</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015144201555.png" alt="image-20251015144201555"></p><p>RDB打开 AOF关闭</p><p>ip和配置文件配置好以后</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015152413257.png" alt="image-20251015152413257"></p><p>需要设置主从关系</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015152448815.png" alt="image-20251015152448815"></p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015152652296.png" alt="image-20251015152652296"></p><p>主从读写分离效果</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015152828775.png" alt="image-20251015152828775"></p><p>从节点只读 写操作只在主节点上允许</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015152950991.png" alt="image-20251015152950991"></p><h2 id="主从数据同步原理"><a href="#主从数据同步原理" class="headerlink" title="主从数据同步原理"></a>主从数据同步原理</h2><h3 id="全量同步"><a href="#全量同步" class="headerlink" title="全量同步"></a>全量同步</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015160637933.png" alt="image-20251015160637933"></p><p>确定主从关系,判断是否第一次来,</p><p>是就使用全量同步,版本信息用来做版本控制</p><p>主节点把内存的所有数据发送,就用到bgsave保存<strong>RDB快照</strong>把RDB文件(先写入主节点磁盘)发送给从节点来执行(发送文件这一步比较占用资源,因为是所有数据)</p><p>主节点写RDB时<strong>处理请求执行的命令</strong>写入到缓冲区中,到时候还会把这里的命令发送给从节点来执行</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015161953438.png" alt="image-20251015161953438"></p><p>如何确定是否第一次来?</p><p>主节点的数据集有自己的replid 同步以后就给从节点也带上这个id</p><p>并且有偏移量, 从节点偏移量小于等于主节点 等于的话就是完全一致</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015162417975.png" alt="image-20251015162417975"></p><p>判断是否是第一次 则需要看replid</p><p>每个从节点在成为从节点前,自己也有replid(自己当作是主节点和offset)</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015162545233.png" alt="image-20251015162545233"></p><p>从节点把自己的replid和offset发送过来,主节点判断replid是否一致,不一致才是第一次,然后返回主节点的replid和offset</p><p>基于offset做增量同步</p><h4 id="流程"><a href="#流程" class="headerlink" title="流程"></a>流程</h4><p>从节点发送请求</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015163617378.png" alt="image-20251015163617378"></p><p>请求局部同步,发送replid</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015163800447.png" alt="image-20251015163800447"></p><p>replid不匹配 不允许做增量同步 要做全量同步</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015163859960.png" alt="image-20251015163859960"></p><p>从节点做全量同步</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015164338799.png" alt="image-20251015164338799"></p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015164436343.png" alt="image-20251015164436343"></p><h3 id="增量同步"><a href="#增量同步" class="headerlink" title="增量同步"></a>增量同步</h3><p>时机:子节点重启时</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015210237114.png" alt="image-20251015210237114"></p><p>根据从节点的offset与主节点的offset比较 差距就是未同步的数据,只要差距不超过范围(被超了一圈)</p><p>主节点和从节点同步这个缓冲区的数据时 同时移动offset 如果offset一致就完全同步 如果出现了不一致 就要恢复 如果超出范围 说明已经被覆盖了,这时候只能做全量同步</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015211834388.png" alt="image-20251015211834388"></p><p>这个问题没法避免,只能减小概率</p><h3 id="优化主从的数据同步"><a href="#优化主从的数据同步" class="headerlink" title="优化主从的数据同步"></a>优化主从的数据同步</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015212916833.png" alt="image-20251015212916833"></p><p>(优化全量同步,避免全量同步)</p><p>主节点配置中开启无磁盘复制 减少磁盘io从而减少系统负担 加快全量同步</p><p>减少单节点的内存占用,这样RDB 磁盘IO时候写的少一些(主,从)</p><p>适当提高积压缓冲区的大小,这样就不会太容易超出范围,并且从节点宕机了要即时实现故障恢复,这样避免全量同步</p><p>如果一个master的slave太多,master的压力也很大,可以采用从继续当主节点,实现主-从-从 链式结构</p><h2 id="哨兵机制"><a href="#哨兵机制" class="headerlink" title="哨兵机制"></a>哨兵机制</h2><p>如果主也挂了,那写服务就挂了,为了实现无感知(高可用性),要检测节点的健康状态,真的挂了要切换主节点(因为从节点做了数据同步,可以当作主节点),以后以新主节点为主</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015224136448.png" alt="image-20251015224136448"></p><p>哨兵自己也不能挂,所以做集群</p><p>通知redis客户端,告诉他换了主节点</p><h3 id="哨兵监控"><a href="#哨兵监控" class="headerlink" title="哨兵监控"></a>哨兵监控</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015224527493.png" alt="image-20251015224527493"></p><p>基于心跳机制,给节点发送ping 等待回复pong 如果再规定时间没响应,主观觉得他下线了(主观下线)</p><p>如果超过指定数量的哨兵都觉得他主观下线了,那就公认是下线了(这个指定数量最好是哨兵的一半以上)</p><h3 id="选举新master"><a href="#选举新master" class="headerlink" title="选举新master"></a>选举新master</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015225523347.png" alt="image-20251015225523347"></p><p>活着并且数据相对最新的 设置优先级 offset看数据到底有多新 都一样的话看runid(节点启动自动生成)从小到大选</p><h3 id="故障转移"><a href="#故障转移" class="headerlink" title="故障转移"></a>故障转移</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015230439613.png" alt="image-20251015230439613"></p><p>选举完后自己就是主,别人的主就是你,挂掉的主不再是主,而是你的从</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251015230606651.png" alt="image-20251015230606651"></p><h3 id="搭建哨兵集群"><a href="#搭建哨兵集群" class="headerlink" title="搭建哨兵集群"></a>搭建哨兵集群</h3><h3 id="redis客户端的哨兵模式"><a href="#redis客户端的哨兵模式" class="headerlink" title="redis客户端的哨兵模式"></a>redis客户端的哨兵模式</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016102254033.png" alt="image-20251016102254033"></p><p>引入依赖</p><p>配置哨兵地址(由哨兵来服务发现)</p><p>配置读写分离(读取策略)</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016102322561.png" alt="image-20251016102322561"></p><p>剩下的主从切换 由redis客户端自动完成</p><p>单节点内存设置不要太高,避免磁盘io(rdb 全量同步)</p><p>单节点内存上限降低了,但是海量数据要存储?这时候就需要考虑怎么解决这个问题</p><p>而且也要应对 写的高并发</p><h2 id="分片集群"><a href="#分片集群" class="headerlink" title="分片集群"></a>分片集群</h2><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016110545795.png" alt="image-20251016110545795"></p><p>多个master(都可以写)来分别保存不同数据应对海量数据存储和高并发写</p><p>并且每个主节点可以有多个从节点 这样并发读也可以满足</p><p>master之间相互检测健康状态 ping pong心跳机制</p><p>不在需要sentinel 哨兵来监控</p><p>可以实现主从切换</p><p>这个redis分片集群的任意节点会有路由机制</p><p>从而通知redis客户端访问正确的节点</p><h3 id="搭建主节点集群"><a href="#搭建主节点集群" class="headerlink" title="搭建主节点集群"></a>搭建主节点集群</h3><h3 id="散列插槽"><a href="#散列插槽" class="headerlink" title="散列插槽"></a>散列插槽</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016125039574.png" alt="image-20251016125039574"></p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016125023121.png" alt="image-20251016125023121"></p><p>存入的数据key和插槽绑定而不是和节点绑定 用CRC16算法得到hash值对16384取余得到index(Slot值)</p><p>数据根据key算出Slot值应该对应在哪个插槽中,找数据就找那一个插槽规管的节点(路由),插槽分配给节点,节点挂了,这个插槽就由另一个节点管</p><p>这样访问任意一个节点访问数据都会重定向到正确的节点去</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016131420180.png" alt="image-20251016131420180"></p><p>如果要将数据保存在同一个 Redis 实例，减少路由和重定向开销，就应该设计 key 的 <code>&#123;&#125;</code> 内部内容（即“哈希标签”）相同。</p><h3 id="集群伸缩"><a href="#集群伸缩" class="headerlink" title="集群伸缩"></a>集群伸缩</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016133003736.png" alt="image-20251016133003736"></p><p>添加要通知已经存在的</p><p>插槽分配 reshard 将插槽分配给指定节点 然后指定插槽大小 来源 目的地的id</p><h3 id="故障转移-1"><a href="#故障转移-1" class="headerlink" title="故障转移"></a>故障转移</h3><p>自动故障转移</p><p>自动抬升一个它的从节点为主节点</p><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016141734877.png" alt="image-20251016141734877"></p><p>手动故障转移 (想要更新节点 比如说换一个性能更好的机子 先让这个机子成为它的从节点 )</p><p>然后手动让这个从节点替换掉原主 成为新主</p><p>​	<img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016142816420.png" alt="image-20251016142816420"></p><p>在这个新的slave上使用cluster failover使主节点宕机,自己成为主节点</p><p>不设置模式时候 首先这个slave告诉要宕机的master ,master的offset</p><p>和从节点的对比 做到数据同步(处理新的请求也要同步过来)</p><p>然后slave把自己变成主,master变成从</p><p>并且通知其他节点</p><p>force就忽略数据一致性</p><ul><li>跳过了“检查数据是否完全同步”的步骤。</li><li>不管主节点有没有新的写操作，直接开始切换。</li></ul><p>takeover暴力夺权</p><p><strong>不通知主节点</strong></p><p><strong>不检查数据一致性</strong></p><p><strong>不等其他节点同意</strong></p><p><strong>直接把自己设为 master</strong></p><p>原主节点如果还活着，会被它当成从节点</p><h3 id="redis客户端使用分片集群"><a href="#redis客户端使用分片集群" class="headerlink" title="redis客户端使用分片集群"></a>redis客户端使用分片集群</h3><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016151756578.png" alt="image-20251016151756578"></p><h2 id="多级缓存策略"><a href="#多级缓存策略" class="headerlink" title="多级缓存策略"></a>多级缓存策略</h2><p><img src="C:\Users\yuyiT\AppData\Roaming\Typora\typora-user-images\image-20251016154549514.png" alt="image-20251016154549514"></p><p>浏览器缓存静态资源,</p><p>Nginx本地缓存 把之前请求的响应结果（比如页面、接口数据）存在 Nginx 节点的内存里</p><p>Redis分布式缓存</p><p>JVM进程缓存(存到本地的内存中)</p><p>其中nginx访问redis学lua脚本 这么多缓存最终要和数据库保持同步</p></article><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="https://cdn.acwing.com/media/user/profile/photo/231226_lg_3803254d73.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload='this.media="all"'><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer="defer"></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2025/09/07/JDBC/" title="java连接数据库"><div class="cover" style="background:var(--default-bg-color)"></div><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">java连接数据库</div></div></a></div></nav><hr><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="lv-container" data-id="city" data-uid="MTAyMC82MDkwMi8zNzM3Mg=="></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn.acwing.com/media/user/profile/photo/231226_lg_3803254d73.jpg" onerror='this.onerror=null,this.src="/img/friend_404.gif"' alt="avatar"></div><div class="author-info__name">tzxld</div><div class="author-info__description">当朋友圈发</div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/yihgyi"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/yihgyi" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="/zhixiang@stu.gxnu.edu.com" target="_blank" title="Email"><i class="fa-solid fa-face-smile"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Redis%E9%AB%98%E7%BA%A7%E7%AF%87"><span class="toc-number">1.</span> <span class="toc-text">Redis高级篇</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%95%E8%8A%82%E7%82%B9%E9%83%A8%E7%BD%B2Redis%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.1.</span> <span class="toc-text">单节点部署Redis的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">1.2.</span> <span class="toc-text">Redis持久化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#RDB%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">1.2.1.</span> <span class="toc-text">RDB持久化</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"><span class="toc-number">1.2.1.1.</span> <span class="toc-text">配置文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#RDB%E7%9A%84%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="toc-number">1.2.1.2.</span> <span class="toc-text">RDB的实现原理</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%A6%81%E7%94%A8RDB"><span class="toc-number">1.2.1.3.</span> <span class="toc-text">禁用RDB</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">1.2.1.4.</span> <span class="toc-text">总结</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#AOF%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">1.2.2.</span> <span class="toc-text">AOF持久化</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%88%B7%E7%9B%98%E7%AD%96%E7%95%A5"><span class="toc-number">1.2.2.1.</span> <span class="toc-text">刷盘策略</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%A7%A6%E5%8F%91AOF%E6%96%87%E4%BB%B6%E9%87%8D%E5%86%99"><span class="toc-number">1.2.2.2.</span> <span class="toc-text">触发AOF文件重写</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RDB%E5%92%8CAOF%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">1.2.3.</span> <span class="toc-text">RDB和AOF的区别?</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BB%E4%BB%8E%E6%9E%B6%E6%9E%84"><span class="toc-number">1.3.</span> <span class="toc-text">主从架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BB%E4%BB%8E%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5%E5%8E%9F%E7%90%86"><span class="toc-number">1.4.</span> <span class="toc-text">主从数据同步原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%A8%E9%87%8F%E5%90%8C%E6%AD%A5"><span class="toc-number">1.4.1.</span> <span class="toc-text">全量同步</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B5%81%E7%A8%8B"><span class="toc-number">1.4.1.1.</span> <span class="toc-text">流程</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A2%9E%E9%87%8F%E5%90%8C%E6%AD%A5"><span class="toc-number">1.4.2.</span> <span class="toc-text">增量同步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E4%B8%BB%E4%BB%8E%E7%9A%84%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5"><span class="toc-number">1.4.3.</span> <span class="toc-text">优化主从的数据同步</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%93%A8%E5%85%B5%E6%9C%BA%E5%88%B6"><span class="toc-number">1.5.</span> <span class="toc-text">哨兵机制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%93%A8%E5%85%B5%E7%9B%91%E6%8E%A7"><span class="toc-number">1.5.1.</span> <span class="toc-text">哨兵监控</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%89%E4%B8%BE%E6%96%B0master"><span class="toc-number">1.5.2.</span> <span class="toc-text">选举新master</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB"><span class="toc-number">1.5.3.</span> <span class="toc-text">故障转移</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%AD%E5%BB%BA%E5%93%A8%E5%85%B5%E9%9B%86%E7%BE%A4"><span class="toc-number">1.5.4.</span> <span class="toc-text">搭建哨兵集群</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#redis%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%9A%84%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.5.5.</span> <span class="toc-text">redis客户端的哨兵模式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E7%89%87%E9%9B%86%E7%BE%A4"><span class="toc-number">1.6.</span> <span class="toc-text">分片集群</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%AD%E5%BB%BA%E4%B8%BB%E8%8A%82%E7%82%B9%E9%9B%86%E7%BE%A4"><span class="toc-number">1.6.1.</span> <span class="toc-text">搭建主节点集群</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%A3%E5%88%97%E6%8F%92%E6%A7%BD"><span class="toc-number">1.6.2.</span> <span class="toc-text">散列插槽</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9B%86%E7%BE%A4%E4%BC%B8%E7%BC%A9"><span class="toc-number">1.6.3.</span> <span class="toc-text">集群伸缩</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB-1"><span class="toc-number">1.6.4.</span> <span class="toc-text">故障转移</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#redis%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BD%BF%E7%94%A8%E5%88%86%E7%89%87%E9%9B%86%E7%BE%A4"><span class="toc-number">1.6.5.</span> <span class="toc-text">redis客户端使用分片集群</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%A4%9A%E7%BA%A7%E7%BC%93%E5%AD%98%E7%AD%96%E7%95%A5"><span class="toc-number">1.7.</span> <span class="toc-text">多级缓存策略</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/11/14/Redis%E9%AB%98%E7%BA%A7%E7%AF%87/" title="redis高级篇">redis高级篇</a><time datetime="2025-11-14T05:05:42.000Z" title="发表于 2025-11-14 13:05:42">2025-11-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/09/07/JDBC/" title="java连接数据库">java连接数据库</a><time datetime="2025-09-07T13:55:42.000Z" title="发表于 2025-09-07 21:55:42">2025-09-07</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/09/07/%E5%8F%8D%E5%B0%84%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/" title="反射基础">反射基础</a><time datetime="2025-09-07T13:45:42.000Z" title="发表于 2025-09-07 21:45:42">2025-09-07</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/09/07/Tlias%E4%B8%AD%E5%AD%A6%E5%88%B0%E7%9A%84Spring%E6%9E%B6%E6%9E%84/" title="Tlias中学到的Spring架构">Tlias中学到的Spring架构</a><time datetime="2025-09-07T13:40:42.000Z" title="发表于 2025-09-07 21:40:42">2025-09-07</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/09/07/%E5%89%8D%E7%AB%AF%E4%B8%89%E5%89%91%E5%AE%A2%E5%9F%BA%E7%A1%80/" title="前端三剑客">前端三剑客</a><time datetime="2025-09-07T13:35:42.000Z" title="发表于 2025-09-07 21:35:42">2025-09-07</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2025 By tzxld</div><div class="footer_custom_text">😄你好呀,我是翎,很高兴认识你</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="直达评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script>function panguFn () {
+  if (typeof pangu === 'object') pangu.autoSpacingPage()
+  else {
+    getScript('https://cdn.jsdelivr.net/npm/pangu/dist/browser/pangu.min.js')
+      .then(() => {
+        pangu.autoSpacingPage()
+      })
+  }
+}
+
+function panguInit () {
+  if (false){
+    GLOBAL_CONFIG_SITE.isPost && panguFn()
+  } else {
+    panguFn()
+  }
+}
+
+document.addEventListener('DOMContentLoaded', panguInit)</script><div class="js-pjax"><script>function loadLivere(){var e,t,o,r;"object"==typeof LivereTower?window.LivereTower.init():(e=document,t="script",r=e.getElementsByTagName(t)[0],"function"!=typeof LivereTower&&((o=e.createElement(t)).src="https://cdn-city.livere.com/js/embed.dist.js",o.async=!0,r.parentNode.insertBefore(o,r)))}function loadOtherComment(){loadLivere()}loadLivere()</script></div><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>let pjaxSelectors = ["meta[property=\"og:image\"]","meta[property=\"og:title\"]","meta[property=\"og:url\"]","head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener scroll 
+  window.tocScrollFn && window.removeEventListener('scroll', window.tocScrollFn)
+  window.scrollCollect && window.removeEventListener('scroll', scrollCollect)
+
+  document.getElementById('rightside').style.cssText = "opacity: ''; transform: ''"
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof chatBtnFn === 'function' && chatBtnFn()
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', (e) => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span> 数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"></div></div><hr><div id="local-search-results"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></body></html>
